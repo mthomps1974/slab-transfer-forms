@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Civil Legal Aid Transfer Declaration</title>
+<style>
+  body { font-family: Arial, sans-serif; background:#f2f4f7; margin:0; padding:20px; color:#0d1b2a; }
+  .card { max-width:700px; margin:0 auto; background:#fff; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.08); padding:30px; }
+  h1 { font-size:20px; color:#1F3864; margin-bottom:4px; }
+  .ref { font-size:12px; color:#666; margin-bottom:20px; }
+  label { display:block; font-weight:bold; font-size:14px; margin-top:16px; margin-bottom:4px; }
+  input[type=text], textarea { width:100%; padding:8px; border:1px solid #ccc; border-radius:5px; font-size:14px; box-sizing:border-box; }
+  textarea { min-height:90px; resize:vertical; }
+  .decl { background:#f8f9fb; border-left:4px solid #1F3864; padding:12px 16px; margin-top:16px; font-size:13px; line-height:1.5; }
+  .decl p { margin:6px 0; }
+  canvas { border:1px solid #999; border-radius:5px; width:100%; height:150px; touch-action:none; }
+  .sig-actions { margin-top:6px; }
+  button { background:#1F3864; color:#fff; border:none; padding:10px 18px; border-radius:6px; font-size:14px; cursor:pointer; margin-top:6px; }
+  button.secondary { background:#888; margin-right:8px; }
+  .submit-btn { width:100%; padding:14px; font-size:16px; margin-top:24px; }
+  #status { text-align:center; margin-top:16px; font-size:14px; }
+  .section-title { background:#1F3864; color:#fff; padding:8px 12px; border-radius:5px; font-size:14px; font-weight:bold; margin-top:24px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Civil Legal Aid – Legal Aid Online Transfer Declaration</h1>
+  <div class="ref">CIVTR/LAO</div>
+
+  <div class="section-title">A. Key Details</div>
+  <label>Solicitor's name</label>
+  <input type="text" id="solname">
+
+  <label>Legal aid reference number</label>
+  <input type="text" id="laref">
+
+  <label>Applicant's full name</label>
+  <input type="text" id="appname">
+
+  <label>Reason for transfer (please give full explanation e.g. details of solicitor-client relationship breakdown)</label>
+  <textarea id="reason"></textarea>
+
+  <div class="section-title">B. Applicant or Representative's Declaration</div>
+  <div class="decl">
+    <p>I want the solicitor named at Section A to act for me in this case.</p>
+    <p>I ask you to transfer my legal aid certificate to that solicitor.</p>
+    <p>I give my permission to SLAB to notify the details of this transfer request to the solicitor named in my legal aid certificate before any transfer, to allow SLAB to check the circumstances, before deciding whether to transfer legal aid.</p>
+    <p>I confirm the information given by me in this application is correct.</p>
+    <p>I confirm that I have read and agree that the reasons provided are my reasons for seeking a transfer of legal aid.</p>
+    <p>I understand that the information I have provided on this form may be used by SLAB or other bodies responsible for auditing or administering public funds for the prevention and detection of fraud or abuse of legal aid.</p>
+  </div>
+
+  <label>Please sign below</label>
+  <canvas id="sigCanvas"></canvas>
+  <div class="sig-actions">
+    <button type="button" class="secondary" onclick="clearSig()">Clear</button>
+  </div>
+
+  <label>Date</label>
+  <input type="text" id="sigdate" placeholder="dd/mm/yyyy">
+
+  <button class="submit-btn" onclick="submitForm()">Submit Declaration</button>
+  <div id="status"></div>
+</div>
+
+<script>
+// ── Backend address ─────────────────────────────────────────
+// Once your new Render service is live, put its address here, e.g:
+// const BACKEND_URL = "https://slab-transfer.onrender.com/submit";
+const BACKEND_URL = "PASTE_YOUR_NEW_RENDER_URL_HERE/submit";
+
+// ── Signature pad ───────────────────────────────────────────
+const canvas = document.getElementById('sigCanvas');
+const ctx = canvas.getContext('2d');
+let drawing = false;
+
+function resizeCanvas() {
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = canvas.offsetWidth * ratio;
+  canvas.height = canvas.offsetHeight * ratio;
+  ctx.scale(ratio, ratio);
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#0d1b2a';
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const point = e.touches ? e.touches[0] : e;
+  return { x: point.clientX - rect.left, y: point.clientY - rect.top };
+}
+function startDraw(e) { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); }
+function draw(e) { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault(); }
+function stopDraw() { drawing = false; }
+
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', stopDraw);
+canvas.addEventListener('mouseleave', stopDraw);
+canvas.addEventListener('touchstart', startDraw);
+canvas.addEventListener('touchmove', draw);
+canvas.addEventListener('touchend', stopDraw);
+
+function clearSig() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+// ── Submit ──────────────────────────────────────────────────
+async function submitForm() {
+  const statusEl = document.getElementById('status');
+  const data = {
+    solname: document.getElementById('solname').value,
+    laref: document.getElementById('laref').value,
+    appname: document.getElementById('appname').value,
+    reason: document.getElementById('reason').value,
+    sigdate: document.getElementById('sigdate').value,
+    sigDataURL: canvas.toDataURL('image/png')
+  };
+
+  if (!data.appname || !data.solname) {
+    statusEl.textContent = 'Please fill in the solicitor and applicant names.';
+    statusEl.style.color = 'red';
+    return;
+  }
+
+  statusEl.textContent = 'Submitting...';
+  statusEl.style.color = '#333';
+
+  try {
+    const res = await fetch(BACKEND_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if (result.ok) {
+      statusEl.textContent = 'Submitted successfully. Reference: ' + result.ref;
+      statusEl.style.color = 'green';
+    } else {
+      statusEl.textContent = 'Error: ' + (result.error || 'Something went wrong.');
+      statusEl.style.color = 'red';
+    }
+  } catch (err) {
+    statusEl.textContent = 'Could not reach the server. Please try again.';
+    statusEl.style.color = 'red';
+  }
+}
+</script>
+</body>
+</html>
