@@ -11,9 +11,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+from PIL import Image, ImageDraw, ImageFont
 
 app = Flask(__name__)
 CORS(app)
@@ -108,16 +106,14 @@ def make_client_sig_image(name, sig_data_url=None):
         with open(tmp.name, 'wb') as f:
             f.write(img_bytes)
     else:
-        fig, ax = plt.subplots(figsize=(4, 0.9))
-        fig.patch.set_facecolor('white')
-        ax.set_facecolor('white')
-        ax.axis('off')
-        ax.text(0.02, 0.5, name, fontfamily='DejaVu Serif', style='italic',
-                 fontsize=28, color='#0d1b2a', transform=ax.transAxes, va='center')
-        plt.tight_layout(pad=0)
-        plt.savefig(tmp.name, format='png', dpi=150, bbox_inches='tight',
-                     facecolor='white', edgecolor='none')
-        plt.close()
+        img = Image.new('RGB', (500, 90), color='white')
+        draw = ImageDraw.Draw(img)
+        try:
+            font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf', 32)
+        except Exception:
+            font = ImageFont.load_default()
+        draw.text((10, 25), name, fill=(13, 27, 42), font=font)
+        img.save(tmp.name, format='PNG')
     return tmp.name
 
 
